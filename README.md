@@ -1,73 +1,179 @@
-# 서울대공원 입장객 수 분석 및 예측 (팀 돌멩이)
+# 서울대공원 입장객 수 분석 및 예측
 
-서울대공원의 일별 입장객 데이터(2018~2023)를 활용해 **방문객 수에 영향을 주는 요인을 분석**하고,
-여러 시계열/머신러닝 모델로 **일별 개인 방문객 수를 예측**한 팀 프로젝트입니다.
+> 2018~2023년 서울대공원 일별 입장객 데이터를 활용해 **방문에 영향을 주는 요인을 분석**하고,
+> 통계 검정과 머신러닝/시계열 모델로 **일별 개인 방문객 수를 예측**한 데이터 분석 프로젝트입니다. (팀 "돌멩이")
 
-## 프로젝트 개요
+---
 
-- **분석 대상**: 서울대공원 일별 입장객 수 (`individual_visitors`, 개인 방문객 기준)
-- **분석 기간**: 2018 ~ 2023년
-- **주요 질문**
-  - 강수 여부가 방문객 수에 영향을 주는가? (T-검정 / 효과크기)
-  - 요일·공휴일·월(계절성)에 따라 방문 패턴이 어떻게 달라지는가?
-  - 2023년 방문객 수를 얼마나 정확히 예측할 수 있는가?
+## 목차
+- [프로젝트 배경](#프로젝트-배경)
+- [분석 질문](#분석-질문)
+- [데이터](#데이터)
+- [분석 흐름](#분석-흐름)
+- [노트북 설명](#노트북-설명)
+- [모델 및 평가](#모델-및-평가)
+- [주요 인사이트](#주요-인사이트)
+- [설치 및 실행](#설치-및-실행)
+- [폴더 구조](#폴더-구조)
+- [기술 스택](#기술-스택)
+- [한계 및 향후 과제](#한계-및-향후-과제)
+
+---
+
+## 프로젝트 배경
+
+서울대공원(동물원·테마가든)은 날씨, 요일, 공휴일, 계절 등 다양한 요인에 따라 방문객 수가 크게 변동합니다.
+방문객 수를 사전에 예측할 수 있다면 인력 배치, 편의시설 운영, 행사 기획 등에 활용할 수 있습니다.
+본 프로젝트는 **무엇이 방문객 수를 결정하는지 분석**하고, 이를 바탕으로 **예측 모델**을 구축하는 것을 목표로 합니다.
+
+## 분석 질문
+
+1. **강수 여부**가 방문객 수에 통계적으로 유의한 영향을 주는가? (T-검정 / 효과크기)
+2. **요일·공휴일·계절(월)** 에 따라 방문 패턴이 어떻게 달라지는가?
+3. 위 요인들을 활용해 **2023년 일별 방문객 수**를 얼마나 정확히 예측할 수 있는가?
 
 ## 데이터
 
-| 구분 | 파일 | 주요 컬럼 |
+- **출처**: 서울대공원 입장객 통계, 기상자료(과천시 강수량)
+- **기간**: 2018 ~ 2023년 (일 단위)
+- **타깃 변수**: `individual_visitors` (단체를 제외한 개인 방문객 수)
+
+### 사용 데이터 파일
+
+| 구분 | 파일 | 사용 노트북 |
 | --- | --- | --- |
-| 입장객 | `서울대공원_입장객_정보_*.csv`, `*_full_visitor_data_cleaned*.csv` | `date`, `visitors`, `zoo_garden_group`, `theme_garden_group`, `individual_visitors`, `day` |
-| 강수량 | `*과천시_강우량.csv` | `지점`, `지점명`, `일시`, `강수량(mm)` |
-| 강수여부 가공 | `*_서울대공원_입장객(강수여부추가ver.).csv` | 위 입장객 컬럼 + `is_rainy`(비옴/비안옴) |
+| 입장객(전처리본) | `서울대공원_입장객_정보_{2018~2023}년_day_한글복원*.csv` | `final`, `park2`, `park3`, `park4` |
+| 강수량 | `{2018~2023}과천시_강우량.csv` | `park2` |
+| 강수여부 가공 | `2018_서울대공원_입장객(강수여부추가ver.).csv` | `T-TEST` |
 
-> 인코딩이 파일마다 `cp949`/`euc-kr`/`utf-8`/`utf-8-sig`로 섞여 있어, 로드 시 인코딩을 분기 처리합니다.
+### 컬럼 설명
 
-## 노트북 구성
+**입장객 데이터**
+
+| 컬럼 | 설명 |
+| --- | --- |
+| `date` | 날짜 (YYYY-MM-DD) |
+| `visitors` | 전체 방문객 수 |
+| `zoo_garden_group` | 동물원 단체 방문객 |
+| `theme_garden_group` | 테마가든 단체 방문객 |
+| `individual_visitors` | **개인 방문객 수 (예측 타깃)** |
+| `day` | 요일 (월~일) |
+| `is_rainy` | 강수 여부 (`비옴`/`비안옴`) — 강수여부 가공본에만 존재 |
+
+**강수량 데이터**
+
+| 컬럼 | 설명 |
+| --- | --- |
+| `지점`, `지점명` | 관측 지점 (과천) |
+| `일시` | 관측 시각 |
+| `강수량(mm)` | 시간당 강수량 (일별 합산하여 사용) |
+
+> 파일 인코딩이 `cp949`/`euc-kr`/`utf-8`/`utf-8-sig`로 섞여 있어, 로드 시 인코딩을 분기 처리합니다.
+
+## 분석 흐름
+
+```
+원본 데이터 (입장객 + 강수량)
+        │
+        ▼
+[1] 전처리 · 결합  ── 강수량 일별 집계, 요일/공휴일/강수여부 파생변수 생성
+        │
+        ▼
+[2] 탐색적 분석(EDA)  ── 강수여부·요일·공휴일·월별 방문객 비교 시각화
+        │
+        ▼
+[3] 통계 검정  ── 강수여부 T-검정 + 효과크기(Cohen's d)
+        │
+        ▼
+[4] 예측 모델링  ── Prophet / LSTM / RandomForest / 앙상블 비교
+        │
+        ▼
+[5] 성능 평가  ── MAE · RMSE · MAPE · R²
+```
+
+## 노트북 설명
 
 | 노트북 | 내용 |
 | --- | --- |
-| `서울대공원_T-TEST_효과크기.ipynb` | 비 오는 날 vs 안 오는 날 방문객 수 T-검정 및 Cohen's d(효과크기) 분석 |
-| `team_stone_seoul_park2.ipynb` | 요일·강수여부·공휴일 기준으로 데이터 분류 및 연도별 비교 시각화 |
-| `team_stone_seoul_park3.ipynb` | 평일/주말/공휴일 분류, Prophet · LSTM · 앙상블을 이용한 방문객 수 예측 |
-| `team_stone_seoul_park4.ipynb` | RandomForest 기반 개인 방문객 예측 및 Feature Importance 분석 |
-| `final.ipynb` | RandomForest + RandomizedSearchCV 하이퍼파라미터 튜닝 최종 모델 |
+| `서울대공원_T-TEST_효과크기.ipynb` | 비 오는 날 vs 안 오는 날 방문객 수에 대한 Welch's T-검정 및 Cohen's d(효과크기) 분석 |
+| `team_stone_seoul_park2.ipynb` | 강수여부 × 요일 × 공휴일 기준으로 데이터를 분류하고 연도별(2018~2023) 패턴 비교 시각화 |
+| `team_stone_seoul_park3.ipynb` | 평일/주말/공휴일 분류 후 **Prophet · LSTM · 앙상블**로 방문객 수 예측 및 비교 |
+| `team_stone_seoul_park4.ipynb` | **RandomForest** 기반 개인 방문객 예측 + Feature Importance 분석 |
+| `final.ipynb` | RandomForest + **RandomizedSearchCV** 하이퍼파라미터 튜닝 + 로그 변환 적용 최종 모델 |
 
-## 사용 모델
+## 모델 및 평가
 
-- **통계 검정**: Welch's T-test, Cohen's d
-- **시계열**: Prophet (공휴일 효과 포함), LSTM
-- **트리 기반**: RandomForestRegressor (+ RandomizedSearchCV)
-- **평가 지표**: MAE, RMSE, MAPE, R²
+| 모델 | 접근 | 특징 |
+| --- | --- | --- |
+| Welch's T-test / Cohen's d | 통계 검정 | 강수여부에 따른 방문객 수 차이 검증 |
+| Prophet | 시계열 | 트렌드·계절성·공휴일 효과 반영, 해석 용이 |
+| LSTM | 딥러닝 시계열 | 비선형 패턴 학습, 시퀀스(최근 30일) 기반 예측 |
+| RandomForest (+ RandomizedSearchCV) | 트리 앙상블 | 파생변수(요일/월/공휴일) 기반, 본 프로젝트 최종 예측 모델 |
 
-## 실행 방법
+- **평가지표**: MAE(평균 절대 오차), RMSE(평균 제곱근 오차), MAPE(평균 절대 백분율 오차), R²
+- 방문객 수의 큰 편차를 완화하기 위해 일부 모델에 **로그 변환(`log1p`/`expm1`)** 을 적용했습니다.
+- 학습/테스트 분리: **2018~2022년 학습 → 2023년 예측·검증**
+
+## 주요 인사이트
+
+- **강수 여부의 영향은 제한적**: 비가 방문객 수를 줄이긴 하지만, 단독으로는 큰 설명력을 갖지 못했습니다.
+- **계절(월)·요일·공휴일의 영향이 더 큼**: 방문 패턴은 날씨보다 월별 계절성과 평일/주말/공휴일 구분에 더 강하게 좌우됩니다.
+- **공휴일은 날씨에 덜 민감**: 공휴일 방문 수요는 강수 여부와 비교적 무관하게 유지되는 경향을 보였습니다.
+- **모델 비교**: Prophet·LSTM은 전반적 계절 흐름은 잘 예측했으나 갑작스러운 **스파이크(특정 이벤트성 급증)** 예측에는 한계가 있었고, 파생변수를 활용한 **RandomForest가 개인 방문객 예측에서 가장 안정적**이었습니다. Prophet + LSTM 앙상블은 기대만큼의 성능 개선을 얻지 못했습니다.
+
+## 설치 및 실행
 
 ```bash
-# 1. 의존성 설치
+# 1. 저장소 클론
+git clone https://github.com/bigparty31/seoul-grand-park-visitor-prediction.git
+cd seoul-grand-park-visitor-prediction
+
+# 2. (권장) 가상환경 생성 후 의존성 설치
 pip install -r requirements.txt
 
-# 2. Jupyter 실행 후 노트북 열기
+# 3. Jupyter 실행
 jupyter notebook
 ```
 
-> 노트북은 저장소 기준 같은 폴더의 CSV 파일을 상대경로로 읽습니다.
-> Prophet 설치 시 환경에 따라 시간이 걸릴 수 있습니다.
+권장 실행 순서:
+1. `서울대공원_T-TEST_효과크기.ipynb` (강수여부 통계 검정)
+2. `team_stone_seoul_park2.ipynb` (EDA / 분류 시각화)
+3. `team_stone_seoul_park3.ipynb` (Prophet / LSTM 예측)
+4. `team_stone_seoul_park4.ipynb` → `final.ipynb` (RandomForest 최종 모델)
+
+> 노트북은 저장소와 같은 폴더의 CSV를 상대경로로 읽습니다.
+> `prophet`, `tensorflow` 설치에는 환경에 따라 시간이 걸릴 수 있습니다.
 
 ## 폴더 구조
 
 ```
 .
-├── final.ipynb                     # 최종 RandomForest 예측 모델
-├── team_stone_seoul_park2.ipynb    # 분류 및 비교 시각화
-├── team_stone_seoul_park3.ipynb    # Prophet / LSTM / 앙상블 예측
-├── team_stone_seoul_park4.ipynb    # RandomForest + Feature Importance
-├── 서울대공원_T-TEST_효과크기.ipynb  # 강수여부 T-검정
-├── *_입장객_*.csv                   # 연도별 입장객 데이터
-├── *과천시_강우량.csv                # 연도별 강수량 데이터
+├── 서울대공원_T-TEST_효과크기.ipynb       # 강수여부 T-검정 / 효과크기
+├── team_stone_seoul_park2.ipynb          # EDA · 분류 · 비교 시각화
+├── team_stone_seoul_park3.ipynb          # Prophet / LSTM / 앙상블 예측
+├── team_stone_seoul_park4.ipynb          # RandomForest + Feature Importance
+├── final.ipynb                           # RandomForest + RandomizedSearchCV 최종 모델
+├── 서울대공원_입장객_정보_*_day_한글복원*.csv  # 입장객 데이터 (2018~2023)
+├── *과천시_강우량.csv                      # 강수량 데이터 (2018~2023)
+├── 2018_서울대공원_입장객(강수여부추가ver.).csv # 강수여부 가공 데이터
+├── 돌프 발표 찐최종.pdf                    # 발표 자료
 ├── requirements.txt
+├── .gitignore
 └── README.md
 ```
 
-## 참고
+## 기술 스택
 
-- 한글 그래프 출력을 위해 Windows 기준 `Malgun Gothic` 폰트를 사용합니다.
-  (다른 OS에서는 `plt.rcParams['font.family']` 값을 환경에 맞게 변경하세요.)
+- **언어**: Python 3.11
+- **데이터 처리**: pandas, numpy
+- **시각화**: matplotlib
+- **통계**: scipy
+- **머신러닝**: scikit-learn (RandomForest, RandomizedSearchCV)
+- **시계열/딥러닝**: Prophet, TensorFlow(Keras LSTM)
+
+## 한계 및 향후 과제
+
+- 이벤트성 급증(벚꽃축제, 특별 행사 등) **스파이크 예측이 어려움** → 외부 이벤트 캘린더를 추가 피처로 반영 필요.
+- 단체 예약(`*_group`)은 실시간 변동 요인이라 모델에서 제외 → 단체 예약 데이터를 별도 모델로 결합하면 정확도 향상 기대.
+- 공휴일은 음력 기반이라 매년 날짜가 달라짐 → 공휴일/연휴 길이를 일반화한 피처 설계 필요.
+- 한글 그래프 출력을 위해 Windows 기준 `Malgun Gothic` 폰트를 사용합니다. (다른 OS에서는 `plt.rcParams['font.family']`를 환경에 맞게 변경)
