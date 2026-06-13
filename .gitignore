@@ -1,0 +1,38 @@
+# Jupyter Notebook
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 가상환경
+.venv/
+venv/
+env/
+ENV/
+
+# 패키지 / 빌드
+build/
+dist/
+*.egg-info/
+
+# 모델 / 캐시 산출물
+*.h5
+*.keras
+*.pkl
+*.joblib
+prophet_model/
+cmdstanpy_*/
+
+# 발표자료(PPTX)는 제외 (PDF만 업로드)
+*.pptx
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
